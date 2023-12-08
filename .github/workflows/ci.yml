@@ -53,6 +53,13 @@ jobs:
             target: aarch64-unknown-linux-gnu
             variant: release
 
+          - os: ${{ github.repository == 'denoland/rusty_v8' && 'ubuntu-22.04-xl' || 'ubuntu-22.04' }}
+            target: armv7-unknown-linux-gnueabihf
+            variant: debug
+
+          - os: ${{ github.repository == 'denoland/rusty_v8' && 'ubuntu-22.04-xl' || 'ubuntu-22.04' }}
+            target: armv7-unknown-linux-gnueabihf
+            variant: release
     env:
       V8_FROM_SOURCE: true
       CARGO_VARIANT_FLAG: ${{ matrix.config.variant == 'release' && '--release' || '' }}
@@ -82,7 +89,7 @@ jobs:
           python-version: 3.11.x
           architecture: x64
 
-      - name: Install cross compilation toolchain
+      - name: Install cross compilation toolchain for aarch64
         if: matrix.config.target == 'aarch64-unknown-linux-gnu'
         run: |
           rustup target add aarch64-unknown-linux-gnu
@@ -98,6 +105,23 @@ jobs:
 
           echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=/usr/bin/aarch64-linux-gnu-gcc-10" >> ${GITHUB_ENV}
           echo "QEMU_LD_PREFIX=/usr/aarch64-linux-gnu" >> ${GITHUB_ENV}
+
+      - name: Install cross compilation toolchain for armv7
+        if: matrix.config.target == 'armv7-unknown-linux-gnueabihf'
+        run: |
+          rustup target add armv7-unknown-linux-gnueabihf
+
+          sudo apt update
+          sudo apt install -yq --no-install-suggests --no-install-recommends \
+            binfmt-support g++-10-arm-linux-gnueabihf g++-10-multilib \
+            gcc-10-arm-linux-gnueabihf libc6-armhf-cross qemu qemu-user \
+            qemu-user-binfmt
+
+          sudo ln -s /usr/arm-linux-gnueabihf/lib/ld-linux-armhf.so.3 \
+                     /lib/ld-linux-armhf.so.3
+
+          echo "CARGO_TARGET_ARMv7_UNKNOWN_LINUX_GNUEABIHF_LINKER=/usr/bin/arm-linux-gnueabihf-gcc-10" >> ${GITHUB_ENV}
+          echo "QEMU_LD_PREFIX=/usr/arm-linux-gnueabihf" >> ${GITHUB_ENV}
 
       - name: Write git_submodule_status.txt
         run: git submodule status --recursive > git_submodule_status.txt
